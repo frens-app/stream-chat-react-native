@@ -68,26 +68,30 @@ export class QuickSqliteClient {
     this.closeDB();
   };
 
-  static executeSql = (query: string, params?: string[]) => {
+  static executeSql = async (query: string, params?: string[]): Promise<any[]> => {
     console.log('executeSql: start')
+
     this.openDB();
 
-    // const { message, rows, status } = sqlite.executeSql(DB_NAME, query, params);
-    this.db.transaction((tx) => {
-      tx.executeSql(query, params, (transaction, resultSet) => {
-        console.log('executeSql: executed with rows ', resultSet.rows._array)
-        this.closeDB();
-
-        if(resultSet.rows) {
-          return resultSet.rows._array
-        } else {
-          return []
-        }
+    return new Promise((resolve, reject) => {
+      this.db.transaction((tx) => {
+        tx.executeSql(query, params, (transaction, resultSet) => {
+          console.log('executeSql: executed with rows ', resultSet.rows._array)
+  
+          if(resultSet.rows) {
+            resolve(resultSet.rows._array)
+          } else {
+            resolve([])
+          }
+        })
+      }, () => {
+        resolve([]);
       })
-    }, () => {
-      this.closeDB();
-      return [];
     })
+
+
+    // const { message, rows, status } = sqlite.executeSql(DB_NAME, query, params);
+
     
     // this.closeDB();
 
@@ -118,15 +122,15 @@ export class QuickSqliteClient {
     return true;
   };
 
-  static initializeDatabase = () => {
+  static initializeDatabase = async () => {
     // @ts-ignore
-    if (sqlite === undefined) {
-      throw new Error(
-        'Please install "react-native-quick-sqlite" package to enable offline support',
-      );
-    }
+    // if (sqlite === undefined) {
+    //   throw new Error(
+    //     'Please install "react-native-quick-sqlite" package to enable offline support',
+    //   );
+    // }
 
-    const version = this.getUserPragmaVersion();
+    const version = await this.getUserPragmaVersion();
 
     if (version !== this.dbVersion) {
       this.dropTables();
@@ -149,16 +153,16 @@ export class QuickSqliteClient {
     // sqlite.executeSql(DB_NAME, `PRAGMA user_version = ${version}`, []);
     this.executeSql(`PRAGMA user_version = ${version}`)
 
-    this.closeDB();
+    // this.closeDB();
   };
 
-  static getUserPragmaVersion = () => {
+  static getUserPragmaVersion = async () => {
     console.log('getUserPragmaVersion: openDB')
     this.openDB();
 
     console.log('getUserPragmaVersion: executeSql')
     // const { message, rows, status } = sqlite.executeSql(DB_NAME, `PRAGMA user_version`, []);
-    const rows = this.executeSql(`PRAGMA user_version`)
+    const rows = await this.executeSql(`PRAGMA user_version`)
     console.log('getUserPragmaVersion: rows ', rows)
 
     this.closeDB();
